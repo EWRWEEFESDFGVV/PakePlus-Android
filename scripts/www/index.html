@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>体重记录</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --primary:#5B6CFF; --primary2:#8B5CF6; --grad:linear-gradient(135deg,#5B6CFF,#8B5CF6);
+  --glow:rgba(91,108,255,.2); --link:#8fb4ff;
+  --bg:#f4f5f7; --card:#fff; --text:#1a1d24;
+  --sub:#9aa0ac; --line:#eceef2; --expense:#f0483e; --income:#18a058;
+  --soft:#f2f4f7; --primary-soft:#eef2ff;
+  --danger-soft:#fef2f2; --placeholder:#c0c5cf;
+  --shadow-sm:0 2px 8px rgba(17,24,39,.06);
+  --shadow-md:0 6px 20px rgba(17,24,39,.09);
+}
+html[data-style="orange"]{--primary:#FF7A3D;--primary2:#FFB03A;--grad:linear-gradient(135deg,#FF7A3D,#FFB03A);--glow:rgba(255,122,61,.2);--link:#ffd9a8}
+html[data-style="mint"]{--primary:#14B8A6;--primary2:#34D399;--grad:linear-gradient(135deg,#14B8A6,#34D399);--glow:rgba(20,184,166,.2);--link:#a7f3d0}
+html[data-style="gold"]{--primary:#D4AF37;--primary2:#F0C75E;--grad:linear-gradient(135deg,#D4AF37,#F0C75E);--glow:rgba(212,175,55,.25);--link:#f5e6a8}
+html[data-style="pink"]{--primary:#EC5C8A;--primary2:#A78BFA;--grad:linear-gradient(135deg,#EC5C8A,#A78BFA);--glow:rgba(236,92,138,.2);--link:#fbcfe8}
+html[data-style="morandi"]{--primary:#7A8CA6;--primary2:#9DB2C7;--grad:linear-gradient(135deg,#7A8CA6,#9DB2C7);--glow:rgba(122,140,166,.22);--link:#c3cfdd}
+html[data-style="neon"]{--primary:#7C3AED;--primary2:#06B6D4;--grad:linear-gradient(135deg,#7C3AED,#06B6D4);--glow:rgba(124,58,237,.22);--link:#c4b5fd}
+html[data-style="midnight"]{--primary:#1E40AF;--primary2:#3B82F6;--grad:linear-gradient(135deg,#1E40AF,#3B82F6);--glow:rgba(30,64,175,.2);--link:#93c5fd}
+html[data-theme="dark"]{
+  --bg:#11131a; --card:#1b1e2a; --text:#e8eaf0; --sub:#7d8599; --line:#2a2e3d;
+  --soft:#242836; --primary-soft:#262c47;
+  --danger-soft:#3a2228; --placeholder:#565d70;
+  --shadow-sm:0 2px 8px rgba(0,0,0,.45);
+  --shadow-md:0 6px 20px rgba(0,0,0,.55);
+}
+html[data-style="gold"][data-theme="dark"]{
+  --bg:#0f1113; --card:#1a1c20; --text:#ece7d8; --sub:#8d8672; --line:#2c2f36;
+  --soft:#24262b; --primary-soft:#2b2a1e;
+  --danger-soft:#3a2a24; --placeholder:#5a5446;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;max-width:480px;margin:0 auto;position:relative;min-height:100vh}
+.hidden{display:none!important}
+
+/* ── 头部 & 动画 ── */
+.top-hero{background:var(--grad);color:#fff;padding:20px 18px 18px;border-radius:0 0 24px 24px;box-shadow:var(--shadow-sm)}
+.top-hero .th-title{font-size:1.05rem;font-weight:700}
+.top-hero .th-sub{font-size:.72rem;opacity:.92;margin-top:6px;display:flex;gap:16px;flex-wrap:wrap}
+.top-hero .th-sub b{font-size:.85rem;font-weight:700}
+.h-restore-btn{background:rgba(255,255,255,.22);color:#fff;border:1.5px dashed rgba(255,255,255,.65);border-radius:20px;padding:9px 20px;font-size:.8rem;font-weight:600;cursor:pointer}
+.h-restore-btn:active{background:rgba(255,255,255,.35)}
+.view-anim{animation:vfade .22s ease}
+@keyframes vfade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.top-btns{position:fixed;top:12px;right:12px;z-index:40;display:flex;gap:8px}
+.theme-btn{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.9);border:none;font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow-md);backdrop-filter:blur(4px);line-height:1;padding:0}
+html[data-theme="dark"] .theme-btn{background:rgba(28,31,42,.9)}
+.style-mask{position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:44}
+.style-panel{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:480px;background:var(--card);border-radius:20px 20px 0 0;z-index:45;box-shadow:0 -8px 30px rgba(0,0,0,.18);padding:18px 18px calc(18px + env(safe-area-inset-bottom));animation:spup .25s ease;max-height:85vh;overflow-y:auto}
+@keyframes spup{from{transform:translateX(-50%) translateY(100%)}to{transform:translateX(-50%) translateY(0)}}
+.sp-hd{font-size:.9rem;font-weight:700;margin-bottom:14px;text-align:center}
+.sp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sp-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;border-radius:12px;border:2px solid transparent;background:var(--soft);cursor:pointer;font-size:.72rem;color:var(--text)}
+.sp-item.on{border-color:var(--primary)}
+.sp-dot{width:34px;height:34px;border-radius:50%;box-shadow:inset 0 -2px 4px rgba(0,0,0,.15)}
+
+/* ── 底部导航 ── */
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--card);border-top:1px solid var(--line);display:flex;z-index:20;padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button{flex:1;background:none;border:none;padding:11px 0;font-size:.78rem;color:var(--sub);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.tabbar button .ic{font-size:1.25rem;line-height:1;transition:transform .18s}
+.tabbar button.on{color:var(--primary);font-weight:700}
+.tabbar button.on .ic{transform:scale(1.18)}
+.tabbar button.on::before{content:'';position:absolute;top:0;width:18px;height:3px;border-radius:0 0 3px 3px;background:var(--grad)}
+
+/* ── 记一笔页 ── */
+#view-add{padding-bottom:90px}
+.hero-big{text-align:center;padding:4px 0 2px}
+.hero-big .lbl{font-size:.68rem;opacity:.85}
+.hero-big .big{font-size:2.5rem;font-weight:800;margin:4px 0 2px;line-height:1.1}
+.hero-big .big small{font-size:1rem;font-weight:600;opacity:.8}
+.dt-row{display:flex;gap:8px;margin:12px 14px 0;align-items:center}
+.dt-row input{flex:1;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;font-size:.9rem;outline:none;background:var(--card);color:var(--text);font-family:inherit;box-shadow:var(--shadow-sm)}
+.dt-row input:focus{border-color:var(--primary)}
+.amount-box{background:var(--card);border:2px solid transparent;border-radius:16px;margin:14px 14px 0;padding:16px;text-align:center;transition:border-color .2s,box-shadow .2s;box-shadow:var(--shadow-sm)}
+.amount-box:focus-within{border-color:var(--primary);box-shadow:0 8px 24px var(--glow)}
+.amount-box .cur{font-size:1rem;font-weight:700;color:var(--sub)}
+.fill-last{border:none;background:var(--primary-soft);color:var(--primary);font-size:.68rem;font-weight:600;border-radius:12px;padding:3px 10px;margin-left:8px;cursor:pointer;vertical-align:middle}
+.fill-last:active{opacity:.7}
+.amount-box input{border:none;outline:none;font-size:2.4rem;font-weight:800;text-align:center;width:100%;margin-top:2px;background:none;color:var(--text)}
+.amount-box input::placeholder{color:var(--placeholder)}
+.dim-toggle{display:flex;align-items:center;justify-content:space-between;margin:12px 14px 0;background:var(--card);border-radius:14px;padding:14px 16px;cursor:pointer;font-size:.88rem;font-weight:700;color:var(--text);box-shadow:var(--shadow-sm)}
+.dim-toggle .arrow{color:var(--sub);transition:.2s;font-size:1rem}
+.dim-toggle .arrow.open{transform:rotate(180deg)}
+.dim-body{display:none;background:var(--card);border-radius:14px;margin:8px 14px 0;padding:14px 14px 8px;box-shadow:var(--shadow-sm)}
+.dim-body.show{display:block}
+.dim-grid{display:flex;flex-direction:column;gap:8px}
+.dim-item{display:flex;align-items:center;gap:10px}
+.dim-item label{font-size:.82rem;color:var(--sub);font-weight:600;white-space:nowrap;min-width:42px;text-align:right}
+.dim-item input{flex:1;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;font-size:.9rem;text-align:center;outline:none;background:var(--card);color:var(--text)}
+.dim-item input:focus{border-color:var(--primary)}
+.save-btn{display:block;width:calc(100% - 28px);margin:16px 14px 0;background:var(--grad);color:#fff;border:none;border-radius:14px;padding:15px;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:var(--shadow-md)}
+.save-btn:active{opacity:.88;transform:scale(.99)}
+
+/* ── 记录页 ── */
+#view-list{padding-bottom:90px}
+.l-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.l-sum .col{background:rgba(255,255,255,.16);border-radius:12px;padding:12px 6px;text-align:center}
+.l-sum .l{font-size:.68rem;opacity:.9}
+.l-sum .v{font-size:1.25rem;font-weight:800;margin-top:3px}
+.chart-card{background:var(--card);border-radius:16px;margin:14px 14px 0;padding:16px;box-shadow:var(--shadow-sm)}
+.tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:6px 15px;font-size:.75rem;font-weight:700;color:var(--sub);background:var(--soft);border:none;border-radius:20px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.tab.on{background:var(--grad);color:#fff;box-shadow:var(--shadow-sm)}
+.chart-wrap{height:230px}canvas{width:100%!important;height:100%!important}
+.range-row{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.range-row::-webkit-scrollbar{display:none}
+.rg-chip{padding:4px 12px;border-radius:14px;font-size:.7rem;background:var(--soft);color:var(--sub);border:none;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.rg-chip.on{background:var(--primary);color:#fff}
+.rg-custom{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--sub)}
+.rg-custom input{flex:1;border:1.5px solid var(--line);border-radius:8px;padding:7px;font-size:.78rem;outline:none;background:var(--card);color:var(--text);min-width:0}
+.cmp-tip{text-align:center;font-size:.66rem;color:var(--sub);margin:-4px 0 6px}
+.cmp-cur{text-align:center;font-size:1.5rem;font-weight:800;padding:6px 0 2px}
+.cmp-cur-tag{font-size:.66rem;font-weight:600;color:var(--primary);margin-bottom:3px}
+.cmp-cur span{font-size:.75rem;font-weight:500;color:var(--sub);margin-left:6px}
+.cmp-pick{display:flex;align-items:center;gap:6px;margin:12px 0}
+.cmp-pick-l{font-size:.72rem;color:var(--sub);font-weight:600;flex-shrink:0;text-align:center}
+.cmp-cal-nav{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.cmp-cal-nav button{background:var(--soft);border:none;width:30px;height:30px;border-radius:8px;font-size:1rem;color:var(--text);cursor:pointer;line-height:1}
+.cmp-cal-title{font-size:.85rem;font-weight:700}
+.cmp-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-top:6px}
+.cmp-cal-wd{text-align:center;font-size:.62rem;color:var(--sub);padding:3px 0}
+.cmp-cal-d{text-align:center;padding:6px 0;font-size:.78rem;border-radius:8px;cursor:pointer;position:relative;color:var(--text)}
+.cmp-cal-d.has{font-weight:700;background:var(--primary-soft)}
+.cmp-cal-d.has::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--primary)}
+.cmp-cal-d.today{outline:1.5px solid var(--primary)}
+.cmp-cal-d.sel{background:var(--grad);color:#fff}
+.cmp-cal-d.sel::after{background:#fff}
+.cmp-cal-d.cur{box-shadow:inset 0 0 0 2px var(--primary2);font-weight:800}
+.cmp-cal-d.cur.sel{box-shadow:none}
+.cmp-cal-d.off{color:var(--sub);opacity:.3;cursor:not-allowed;pointer-events:none}
+.cmp-base{text-align:center;font-size:1.1rem;font-weight:700;color:var(--sub)}
+.cmp-base span{font-size:.72rem;margin-left:6px}
+.cmp-base-note{font-size:.66rem;font-weight:500;color:var(--sub);margin-top:3px}
+.cmp-sum{text-align:center;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+.cmp-sub2{font-size:.78rem;color:var(--sub);margin-top:4px;font-weight:500}
+.list{padding:14px 14px 0}
+.date-hd{font-size:.74rem;color:var(--sub);padding:11px 4px 6px;font-weight:600}
+.item{background:var(--card);border-radius:14px;padding:14px;margin-bottom:9px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:var(--shadow-sm)}
+.item:active{transform:scale(.98)}
+.item .icon{width:44px;height:44px;border-radius:50%;background:var(--primary-soft);display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0}
+.item .mid{flex:1;min-width:0}
+.item .cat{font-size:1rem;font-weight:700}
+.item .cat .kg{font-size:.72rem;color:var(--sub);font-weight:500;margin-left:4px}
+.item .note{font-size:.74rem;color:var(--sub);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item.cmp-on{outline:2px solid var(--primary);outline-offset:-2px}
+.item .chg{text-align:right;flex-shrink:0;padding:7px 10px;border-radius:10px;background:var(--soft);cursor:pointer}
+.item .chg:active{opacity:.7}
+.item .chg .diff{font-size:1.05rem;font-weight:800}
+.item .chg .diff.down{color:var(--income)}
+.item .chg .diff.up{color:var(--expense)}
+.item .chg .diff.same{color:var(--sub)}
+.item .chg .vs{font-size:.6rem;color:var(--sub);margin-top:1px}
+.item .del-btn{background:none;border:none;color:var(--sub);cursor:pointer;font-size:.95rem;padding:4px 6px;flex-shrink:0;line-height:1;opacity:.5}
+.item .del-btn:active{color:var(--expense);opacity:1}
+.empty{text-align:center;color:var(--sub);padding:60px 0;font-size:.82rem}
+.empty-btn{margin:16px auto 0;width:130px;background:var(--grad);color:#fff;border-radius:20px;padding:10px 0;font-size:.82rem;font-weight:600;cursor:pointer}
+
+/* ── 分析页 ── */
+#view-analysis{padding-bottom:90px}
+.bg-card{background:var(--card);border-radius:16px;margin:14px 14px 0;padding:18px 16px;box-shadow:var(--shadow-sm)}
+.bg-hd{font-size:.9rem;font-weight:700;margin-bottom:12px}
+.bg-stats{display:flex;gap:6px;margin-bottom:12px}
+.bg-stat{flex:1;text-align:center;background:var(--soft);border-radius:10px;padding:11px 4px}
+.bg-stat .v{font-size:1.15rem;font-weight:700}
+.bg-stat .l{font-size:.6rem;color:var(--sub);margin-top:2px}
+.bg-bar{height:10px;background:var(--line);border-radius:5px;overflow:hidden;margin-bottom:4px}
+.bg-fill{height:100%;border-radius:5px;background:var(--grad);transition:width .4s}
+.bg-pct{font-size:.62rem;color:var(--sub);text-align:right;margin-bottom:8px}
+.ms-row{display:flex;justify-content:space-between;font-size:.8rem;padding:7px 0;border-bottom:1px solid var(--line)}
+.ms-row:last-child{border-bottom:none}
+.ms-row .kg{font-weight:700}
+.ms-row .d{color:var(--sub)}
+.set-row{display:flex;gap:8px}
+.set-row input{flex:1;border:1.5px solid var(--line);border-radius:8px;padding:9px 10px;font-size:.85rem;outline:none;background:var(--card);color:var(--text);min-width:0}
+.set-row input:focus{border-color:var(--primary)}
+.set-row button{flex-shrink:0;border:none;border-radius:8px;padding:9px 16px;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--grad);color:#fff;white-space:nowrap}
+.ana-empty{color:var(--sub);font-size:.78rem;text-align:center;padding:10px 0}
+
+/* ── 导出面板 ── */
+.exp-sec{font-size:.72rem;color:var(--sub);font-weight:600;margin:14px 0 8px}
+.exp-chips{display:flex;gap:6px;flex-wrap:wrap}
+.f-chip{padding:5px 12px;border-radius:14px;font-size:.72rem;background:var(--soft);color:var(--sub);cursor:pointer;border:none;white-space:nowrap}
+.f-chip.on{background:var(--primary);color:#fff}
+.exp-custom{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:.8rem;color:var(--sub)}
+.exp-custom input{flex:1;border:1.5px solid var(--line);border-radius:8px;padding:8px;font-size:.8rem;outline:none;background:var(--card);color:var(--text);min-width:0}
+.exp-rows{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.exp-row{background:var(--soft);border:none;border-radius:12px;padding:14px;text-align:left;font-size:.9rem;font-weight:700;color:var(--text);cursor:pointer}
+.exp-row:active{opacity:.8}
+.exp-sub{font-size:.72rem;font-weight:400;color:var(--sub);margin-top:4px}
+
+/* ── toast ── */
+.toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(8px);background:rgba(0,0,0,.72);color:#fff;padding:12px 22px;border-radius:10px;font-size:.85rem;z-index:50;opacity:0;transition:.25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.toast a{color:var(--link);text-decoration:underline;cursor:pointer;margin-left:8px;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="top-btns">
+  <button id="styleBtn" class="theme-btn" onclick="toggleStylePanel()" title="切换风格">🎨</button>
+  <button id="themeBtn" class="theme-btn" onclick="toggleTheme()" title="切换深浅色">🌙</button>
+</div>
+<div id="styleMask" class="style-mask hidden" onclick="toggleStylePanel()"></div>
+<div id="stylePanel" class="style-panel hidden">
+  <div class="sp-hd">选择风格</div>
+  <div class="sp-grid" id="spGrid"></div>
+</div>
+
+<!-- ═══ 记一笔 ═══ -->
+<div id="view-add">
+  <div class="top-hero">
+    <div class="th-title">⚖️ 记体重</div>
+    <div class="hero-big">
+      <div class="lbl">当前体重</div>
+      <div class="big"><span id="hCur">--</span> <small>kg</small></div>
+    </div>
+    <div class="th-sub">
+      <span>距目标 <b id="hLeft">--</b></span>
+      <span>上次变化 <b id="hLast">--</b></span>
+      <span id="hToday"></span>
+      <span id="syncState" style="opacity:.8"></span>
+    </div>
+  </div>
+  <div class="dt-row"><input type="date" id="dateIn"></div>
+  <div class="amount-box"><div class="cur">kg<button id="fillLast" class="fill-last" onclick="fillLast()" style="display:none"></button></div><input type="text" id="wtIn" inputmode="decimal" placeholder="0.00"></div>
+  <div class="dim-toggle" onclick="toggleDim()"><span>维度（胸 / 腰 / 臀 / 大腿 / 小腿）</span><span class="arrow" id="dimArrow">▾</span></div>
+  <div class="dim-body" id="dimBody">
+    <div class="dim-grid">
+      <div class="dim-item"><label>胸围</label><input type="number" id="chestIn" placeholder="cm" step="0.5"></div>
+      <div class="dim-item"><label>腰围</label><input type="number" id="waistIn" placeholder="cm" step="0.5"></div>
+      <div class="dim-item"><label>臀围</label><input type="number" id="hipIn" placeholder="cm" step="0.5"></div>
+      <div class="dim-item"><label>大腿</label><input type="number" id="thighIn" placeholder="cm" step="0.5"></div>
+      <div class="dim-item"><label>小腿</label><input type="number" id="calfIn" placeholder="cm" step="0.5"></div>
+    </div>
+  </div>
+  <button class="save-btn" onclick="saveRecord()">保存</button>
+</div>
+
+<!-- ═══ 记录 ═══ -->
+<div id="view-list" class="hidden">
+  <div class="top-hero">
+    <div class="th-title">📊 体重记录</div>
+    <div class="l-sum" style="margin-top:12px">
+      <div class="col"><div class="l">当前</div><div class="v" id="sumCur">--</div></div>
+      <div class="col"><div class="l">BMI</div><div class="v" id="sumBmi">--</div></div>
+      <div class="col"><div class="l">累计</div><div class="v" id="sumChange">--</div></div>
+      <div class="col"><div class="l">剩余</div><div class="v" id="sumLeft">--</div></div>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="range-row" id="chartRangeRow"></div>
+    <div class="rg-custom hidden" id="chartCustomRow">
+      <input type="date" id="chartFrom"><span>~</span><input type="date" id="chartTo">
+    </div>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-k="weight">体重</button>
+      <button class="tab" data-k="chest">胸围</button>
+      <button class="tab" data-k="waist">腰围</button>
+      <button class="tab" data-k="hip">臀围</button>
+      <button class="tab" data-k="thigh">大腿</button>
+      <button class="tab" data-k="calf">小腿</button>
+      <button class="tab" data-k="bmi">BMI</button>
+    </div>
+    <div class="chart-wrap"><canvas id="chart"></canvas></div>
+  </div>
+  <div class="list" id="list"></div>
+</div>
+
+<!-- ═══ 分析 ═══ -->
+<div id="view-analysis" class="hidden">
+  <div class="top-hero">
+    <div class="th-title">📈 减脂分析</div>
+    <div class="th-sub" id="anSub"></div>
+  </div>
+  <div class="bg-card">
+    <div class="bg-hd">🎯 目标进度</div>
+    <div class="bg-stats">
+      <div class="bg-stat"><div class="v" id="gStart">--</div><div class="l">起点</div></div>
+      <div class="bg-stat"><div class="v" id="gCur">--</div><div class="l">当前</div></div>
+      <div class="bg-stat"><div class="v" id="gGoal">--</div><div class="l">目标</div></div>
+      <div class="bg-stat"><div class="v" id="gPct">--</div><div class="l">完成</div></div>
+    </div>
+    <div class="bg-bar"><div class="bg-fill" id="gFill"></div></div>
+    <div class="bg-pct" id="gPctTxt">0%</div>
+  </div>
+  <div class="bg-card">
+    <div class="bg-hd">🏥 身体状态</div>
+    <div class="bg-stats">
+      <div class="bg-stat"><div class="v" id="bBmi">--</div><div class="l">BMI</div></div>
+      <div class="bg-stat"><div class="v" id="bTag">--</div><div class="l">状态</div></div>
+      <div class="bg-stat"><div class="v" id="b7d">--</div><div class="l">近7天</div></div>
+      <div class="bg-stat"><div class="v" id="b30d">--</div><div class="l">近30天</div></div>
+    </div>
+    <div class="ms-row"><span class="kg">📅 预计达标</span><span class="d" id="bPred">--</span></div>
+    <div class="ms-row"><span class="kg">📈 连续趋势</span><span class="d" id="streak">--</span></div>
+  </div>
+  <div class="bg-card">
+    <div class="bg-hd">🏆 里程碑</div>
+    <div id="msList"></div>
+  </div>
+  <div class="bg-card">
+    <div class="bg-hd">📐 维度变化（vs 首次记录）</div>
+    <div id="dimChanges"></div>
+  </div>
+  <div class="bg-card">
+    <div class="bg-hd">⚙️ 设置</div>
+    <div class="set-row">
+      <input type="number" id="setGoal" placeholder="目标体重 kg">
+      <input type="number" id="setHeight" placeholder="身高 cm">
+      <button onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 导出面板 ═══ -->
+<div id="cmpPanel" class="style-panel hidden">
+  <div class="sp-hd">对比详情</div>
+  <div class="cmp-tip">💡 面板开着时，点列表其他记录的变化数字可直接切换</div>
+  <div class="cmp-cur" id="cmpCur"></div>
+  <div class="cmp-pick-l" style="margin-top:10px">与哪天比 · ▢ 本条 · ■ 基准 · ● 有记录</div>
+  <div class="cmp-cal-nav">
+    <button onclick="cmpCalNav(-1)">‹</button>
+    <div class="cmp-cal-title" id="cmpCalTitle"></div>
+    <button onclick="cmpCalNav(1)">›</button>
+  </div>
+  <div class="cmp-cal-grid" id="cmpCalGrid"></div>
+  <div class="cmp-pick" style="margin-top:8px">
+    <button class="rg-chip" onclick="cmpPickRecent()">上一条</button>
+    <button class="rg-chip" onclick="cmpPickFirst()">第一条</button>
+  </div>
+  <div class="cmp-base" id="cmpBase"></div>
+  <div class="cmp-sum" id="cmpSum"></div>
+</div>
+
+<div id="exportMask" class="style-mask hidden" onclick="toggleExportPanel()"></div>
+<div id="exportPanel" class="style-panel hidden">
+  <div class="sp-hd">导出数据</div>
+  <div class="exp-sec">时间范围</div>
+  <div class="exp-chips" id="expRangeRow"></div>
+  <div class="exp-custom hidden" id="expCustomRow">
+    <input type="date" id="expFrom"><span>~</span><input type="date" id="expTo">
+  </div>
+  <div class="exp-rows">
+    <button class="exp-row" onclick="exportCSV()"><div>📄 导出 CSV</div><div class="exp-sub">日期、体重、五项维度，Excel 可直接打开</div></button>
+    <button class="exp-row" onclick="exportJSON()"><div>💾 全量备份</div><div class="exp-sub">全部数据（不受上方筛选影响）</div></button>
+  </div>
+</div>
+
+<div class="tabbar">
+  <button id="navAdd" class="on" onclick="goAdd()"><span class="ic">⚖️</span>记一笔</button>
+  <button id="navList" onclick="goList()"><span class="ic">📋</span>记录</button>
+  <button id="navAna" onclick="goAna()"><span class="ic">📈</span>分析</button>
+  <button id="navExport" onclick="toggleExportPanel()"><span class="ic">⤓</span>导出</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+  // ── 常量 ──
+  var KEY='wt_rec_v2';
+  var API='https://incomparable-phoenix-31689e.netlify.app/.netlify/functions/data?basket=weight';
+  var API_JB='https://api.jsonbin.io/v3/b/6a8ee3DFDA38895dFE13305a';
+  var MKEY='$2a$10$yOkSsNj43UB4gRPcysaad.FjI0BtE6c1EkeyCwIzvgQv4jkGbbGDi';
+  var DIMS=['chest','waist','hip','thigh','calf'];
+  var DN={weight:'体重',chest:'胸围',waist:'腰围',hip:'臀围',thigh:'大腿',calf:'小腿',bmi:'BMI'};
+  var DC={chest:'#ec4899',waist:'#f0483e',hip:'#f59e0b',thigh:'#8b5cf6',calf:'#18a058',bmi:'#f59e0b'};
+
+  var records=[],settings={goal:65,height:170};
+  var curTab='weight',editingDate=null;
+  // 历史记录备份（截至 2026.06.18）
+  var HISTORY=[
+    {date:'2026-04-18',weight:77.00},
+    {date:'2026-04-27',weight:71.80},
+    {date:'2026-05-10',weight:71.80},
+    {date:'2026-05-13',weight:73.65},
+    {date:'2026-05-15',weight:74.19},
+    {date:'2026-05-27',weight:72.10},
+    {date:'2026-06-14',weight:72.00},
+    {date:'2026-06-18',weight:72.60}
+  ];
+
+  // ── 工具 ──
+  function p2(n){return n<10?'0'+n:''+n}
+  function ymStr(d){return d.getFullYear()+'-'+p2(d.getMonth()+1)}
+  function dStr(d){return ymStr(d)+'-'+p2(d.getDate())}
+  function tdy(){return dStr(new Date())}
+  function fmt(ds){var p=ds.split('-');return parseInt(p[1])+'/'+parseInt(p[2])}
+  function money1(n){return n===null||n===undefined?'--':(n>0?'+':'')+n.toFixed(1)}
+  function toast(msg){
+    var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+    clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('show')},1200);
+  }
+  function anim(el){el.classList.remove('view-anim');void el.offsetWidth;el.classList.add('view-anim')}
+  function sortR(){records.sort(function(a,b){return a.date<b.date?-1:1})}
+
+  // ── 云同步（云端为准 + 自动重试） ──
+  function cloudLoad(){
+    function tryGet(n){
+      return fetch(API).then(function(r){
+        if(!r.ok){
+          if(n>0)return tryGet(n-1);
+          return null;
+        }
+        return r.json();
+      }).catch(function(){
+        if(n>0)return tryGet(n-1);
+        return null;
+      });
+    }
+    function tryGetJB(n){
+      return fetch(API_JB+'/latest',{headers:{'X-Master-Key':MKEY}}).then(function(r){
+        if(!r.ok){
+          if(n>0)return tryGetJB(n-1);
+          return null;
+        }
+        return r.json();
+      }).catch(function(){
+        if(n>0)return tryGetJB(n-1);
+        return null;
+      });
+    }
+    return tryGet(1).then(function(d){
+      if(d&&(d.records||d.record))return d;
+      return tryGetJB(1);// 中转失败 → 直连 JSONBin 兜底
+    });
+  }
+  function cloudSave(){
+    var h={'Content-Type':'application/json'};
+    var b=JSON.stringify({records:records,settings:settings});
+    // 双通道同时写：中转照发（尽力），但只认 JSONBin 直连结果（中转曾假成功）
+    fetch(API,{method:'PUT',headers:h,body:b}).catch(function(){});
+    var p2=fetch(API_JB,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':MKEY},body:b}).then(function(r){return {ok:r.ok}}).catch(function(){return {ok:false}});
+    return new Promise(function(resolve){
+      var done=false;
+      setTimeout(function(){if(!done){done=true;resolve({ok:false})}},15000);// 15 秒内直连没成功算失败
+      p2.then(function(r){if(!done&&r.ok){done=true;resolve({ok:true})}});
+    });
+  }
+  function load(){
+    try{
+      var r=localStorage.getItem(KEY);
+      if(r){
+        var d=JSON.parse(r);
+        if(Array.isArray(d))records=d;
+        else{records=Array.isArray(d.records)?d.records:[];settings=(d.settings&&typeof d.settings==='object')?d.settings:{goal:65,height:170}}
+      }
+    }catch(e){}
+    if(!Array.isArray(records))records=[];
+    cloudLoad().then(function(d){
+      var rec=(d&&d.record)?d.record:d;
+      var cloudRecords=null,cloudSettings=null;
+      if(Array.isArray(rec))cloudRecords=rec;
+      else if(rec&&Array.isArray(rec.records)){cloudRecords=rec.records;cloudSettings=rec.settings}
+      if(cloudRecords===null){syncOk=false;finishLoad();return}// 云端无数据或格式异常 → 保留本地
+      var ts=parseInt(localStorage.getItem(KEY+'_ts')||'0');
+      if(Date.now()-ts<30000){
+        // 30 秒内刚本地操作过（含删除后本地为空）→ 信任本地，防云端延迟旧数据回灌
+        syncOk=true;
+        finishLoad();
+        return;
+      }
+      syncOk=true;
+      if(cloudRecords.length===0&&records.length>0){
+        // 云端空（可能是另一设备删空）→ 以云端为准；本地数据存保险箱不丢失、不回灌
+        try{localStorage.setItem(KEY+'_backup',JSON.stringify({records:records,settings:settings}))}catch(e){}
+      }
+      records=cloudRecords;
+      if(cloudSettings&&typeof cloudSettings==='object')settings=cloudSettings;
+      localStorage.setItem(KEY,JSON.stringify({records:records,settings:settings}));
+      var before=records.length;
+      dedupe();
+      if(records.length!==before)save(true);// 清理云端重复日期
+      finishLoad();
+    }).catch(function(){syncOk=false;finishLoad()});
+  }
+  function finishLoad(){
+    refreshAll();
+    renderSyncState();
+  }
+  var syncOk=null;// 最近一次云端读写结果
+  function renderSyncState(){
+    var el=document.getElementById('syncState');
+    if(el)el.textContent=syncOk===null?'':(syncOk?'☁ 已同步':'⚠ 云端未同步');
+  }
+  function save(silent){
+    localStorage.setItem(KEY,JSON.stringify({records:records,settings:settings}));
+    localStorage.setItem(KEY+'_ts',String(Date.now()));// 本地修改时间戳（防云端延迟旧数据回灌）
+    cloudSave().then(function(r){
+      syncOk=!!(r&&r.ok);
+      renderSyncState();
+    }).catch(function(){
+      syncOk=false;
+      renderSyncState();
+      if(!silent)toast('⚠️ 已存本地，云端同步失败');
+    });
+  }
+  function dedupe(){// 同日期记录合并为一条（保留后写的非空字段），修复旧数据重复日期
+    var map={};
+    records.forEach(function(r){
+      if(!map[r.date]){map[r.date]=r}
+      else{
+        var t=map[r.date];
+        for(var k in r){if(k!=='date'&&r[k]!==undefined&&r[k]!==null&&r[k]!=='')t[k]=r[k]}
+      }
+    });
+    records=Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return a.date<b.date?-1:1});
+  }
+
+  // ── 风格 & 深浅色 ──
+  var STYLES=[
+    {id:'blue',name:'蓝紫',c1:'#5B6CFF',c2:'#8B5CF6'},
+    {id:'orange',name:'活力橙',c1:'#FF7A3D',c2:'#FFB03A'},
+    {id:'mint',name:'薄荷绿',c1:'#14B8A6',c2:'#34D399'},
+    {id:'gold',name:'黑金',c1:'#D4AF37',c2:'#F0C75E'},
+    {id:'pink',name:'樱粉',c1:'#EC5C8A',c2:'#A78BFA'},
+    {id:'morandi',name:'莫兰迪',c1:'#7A8CA6',c2:'#9DB2C7'},
+    {id:'neon',name:'霓虹',c1:'#7C3AED',c2:'#06B6D4'},
+    {id:'midnight',name:'午夜蓝',c1:'#1E40AF',c2:'#3B82F6'}
+  ];
+  var style=localStorage.getItem('wt_style')||'blue';
+  var theme=localStorage.getItem('wt_theme')||'auto';
+  function applyTheme(){
+    var sysDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var dark=(theme==='dark')||(theme==='auto'&&(sysDark||style==='gold'));
+    document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+    document.getElementById('themeBtn').textContent=dark?'☀️':'🌙';
+  }
+  function applyStyle(){
+    document.documentElement.setAttribute('data-style',style==='blue'?'':style);
+    applyTheme();
+    renderStylePanel();
+    drawChart();// 图表颜色跟随主题
+  }
+  function renderStylePanel(){
+    var h='';
+    STYLES.forEach(function(s){
+      h+='<div class="sp-item'+(style===s.id?' on':'')+'" onclick="selectStyle(\''+s.id+'\')"><div class="sp-dot" style="background:linear-gradient(135deg,'+s.c1+','+s.c2+')"></div>'+s.name+'</div>';
+    });
+    document.getElementById('spGrid').innerHTML=h;
+  }
+  function toggleStylePanel(){
+    var p=document.getElementById('stylePanel'),m=document.getElementById('styleMask');
+    if(p.classList.contains('hidden')){p.classList.remove('hidden');m.classList.remove('hidden')}
+    else{p.classList.add('hidden');m.classList.add('hidden')}
+  }
+  function selectStyle(id){
+    style=id;
+    localStorage.setItem('wt_style',id);
+    applyStyle();
+    toast('已切换「'+STYLES.filter(function(s){return s.id===id})[0].name+'」');
+  }
+  function toggleTheme(){
+    var dark=document.documentElement.getAttribute('data-theme')==='dark';
+    theme=dark?'light':'dark';
+    localStorage.setItem('wt_theme',theme);
+    applyTheme();
+    drawChart();
+  }
+
+  // ── 视图切换 ──
+  function setNav(on){
+    document.getElementById('navAdd').classList.toggle('on',on==='add');
+    document.getElementById('navList').classList.toggle('on',on==='list');
+    document.getElementById('navAna').classList.toggle('on',on==='ana');
+  }
+  function goAdd(){
+    document.getElementById('view-add').classList.remove('hidden');
+    document.getElementById('view-list').classList.add('hidden');
+    document.getElementById('view-analysis').classList.add('hidden');
+    setNav('add');
+    renderHero();
+    anim(document.getElementById('view-add'));
+  }
+  function goList(){
+    document.getElementById('view-add').classList.add('hidden');
+    document.getElementById('view-list').classList.remove('hidden');
+    document.getElementById('view-analysis').classList.add('hidden');
+    setNav('list');
+    renderList();
+    anim(document.getElementById('view-list'));
+  }
+  function goAna(){
+    document.getElementById('view-add').classList.add('hidden');
+    document.getElementById('view-list').classList.add('hidden');
+    document.getElementById('view-analysis').classList.remove('hidden');
+    setNav('ana');
+    renderAnalysis();
+    anim(document.getElementById('view-analysis'));
+  }
+
+  // ── 记一笔 ──
+  function renderHero(){
+    sortR();
+    var lw=records.length?records[records.length-1].weight:null;
+    document.getElementById('hCur').textContent=lw?lw.toFixed(2):'--';
+    var left=(lw||0)-settings.goal;// 体重-目标：>0 还差，<=0 已达成
+    var hl=document.getElementById('hLeft');
+    hl.textContent=lw?(left>0?left.toFixed(1)+' kg':'已达成 🎉'):'--';
+    hl.style.color=lw?(left>0?'#ffd166':'#7ae582'):'inherit';
+    var hl2=document.getElementById('hLast');
+    if(records.length>=2){
+      var d=records[records.length-1].weight-records[records.length-2].weight;
+      hl2.textContent=(d<=0?'↓ ':'↑ ')+Math.abs(d).toFixed(2)+' kg';
+      hl2.style.color=d<=0?'#7ae582':'#ff9e9e';
+    }else{hl2.textContent='--'}
+    // 未记录天数提醒
+    var lastDate=records.length?records[records.length-1].date:null;
+    var gapDays=lastDate?Math.round((new Date(tdy()+'T00:00:00')-new Date(lastDate+'T00:00:00'))/86400000):0;
+    var ht=document.getElementById('hToday');
+    if(!lastDate){ht.textContent='';ht.style.color='inherit'}
+    else if(gapDays===0){ht.textContent='✓ 今天已记录';ht.style.color='inherit'}
+    else{ht.textContent='⚠️ '+gapDays+' 天没记录了';ht.style.color=gapDays>=3?'#ffd166':'inherit'}
+    // 上次体重快捷填入按钮
+    var fb=document.getElementById('fillLast');
+    fb.style.display=records.length?'inline-block':'none';
+    if(records.length)fb.textContent='填入上次 '+records[records.length-1].weight.toFixed(2);
+  }
+  function fillLast(){
+    if(!records.length){toast('还没有记录');return}
+    document.getElementById('wtIn').value=records[records.length-1].weight;
+    document.getElementById('wtIn').focus();
+  }
+  function toggleDim(){
+    document.getElementById('dimBody').classList.toggle('show');
+    document.getElementById('dimArrow').classList.toggle('open');
+  }
+  document.getElementById('wtIn').oninput=function(){
+    this.value=this.value.replace(/[^\d.]/g,'');
+    var p=this.value.split('.');
+    if(p.length>2)this.value=p[0]+'.'+p.slice(1).join('');
+  };
+  function clearInput(){
+    document.getElementById('wtIn').value='';
+    for(var i=0;i<DIMS.length;i++)document.getElementById(DIMS[i]+'In').value='';
+    document.getElementById('dimBody').classList.remove('show');
+    document.getElementById('dimArrow').classList.remove('open');
+    document.getElementById('dateIn').value=tdy();
+    editingDate=null;
+  }
+  function saveRecord(){
+    var w=parseFloat(document.getElementById('wtIn').value);
+    if(isNaN(w)||w<=0||w>300){toast('请输入有效体重');return}
+    w=Math.round(w*100)/100;
+    var dt=document.getElementById('dateIn').value||tdy();
+    var dims={};
+    for(var i=0;i<DIMS.length;i++){
+      var k=DIMS[i],v=parseFloat(document.getElementById(k+'In').value);
+      if(!isNaN(v)&&v>0)dims[k]=v;
+    }
+    var ix=-1;
+    for(var i=0;i<records.length;i++)if(records[i].date===dt){ix=i;break}
+    if(ix>=0){records[ix].weight=w;for(var dk in dims)records[ix][dk]=dims[dk]}
+    else{var ob={date:dt,weight:w};for(var dk2 in dims)ob[dk2]=dims[dk2];records.push(ob)}
+    sortR();
+    // 变化提示
+    var ix2=-1;
+    for(var i2=0;i2<records.length;i2++)if(records[i2].date===dt){ix2=i2;break}
+    var msg='已记录 '+w.toFixed(2)+' kg';
+    if(ix2>0){
+      var d2=records[ix2-1].weight-w;
+      msg+=d2===0?'，与上次持平':(d2>0?'，比上次 ↓'+d2.toFixed(2):'，比上次 ↑'+Math.abs(d2).toFixed(2))+' kg';
+    }
+    var isNewLow=records.length>1;
+    for(var i3=0;i3<records.length;i3++){
+      if(records[i3].date!==dt&&records[i3].weight<w){isNewLow=false;break}
+    }
+    if(isNewLow)msg+=' · 🎉 历史新低';
+    if(w<=settings.goal)msg='🎉 达成目标 '+settings.goal.toFixed(1)+' kg！';
+    var editing=!!editingDate;
+    save();
+    clearInput();
+    renderHero();renderList();renderAnalysis();
+    if(editing){goList();toast('已修改');return}
+    toast(msg);
+    document.getElementById('wtIn').focus();// 连续记录
+  }
+
+  // ── 记录页 ──
+  function renderList(){
+    sortR();
+    var lw=records.length?records[records.length-1].weight:null;
+    var fw=records.length?records[0].weight:null;
+    document.getElementById('sumCur').textContent=lw?lw.toFixed(1):'--';
+    document.getElementById('sumBmi').textContent=lw?(lw/((settings.height/100)*(settings.height/100))).toFixed(1):'--';
+    var ch=lw&&fw?(lw-fw):null,chEl=document.getElementById('sumChange');
+    if(ch===null)chEl.textContent='--';
+    else{chEl.textContent=(ch<=0?'':'+')+ch.toFixed(1);chEl.style.color=ch<=0?'#7ae582':'#ff9e9e'}
+    var leftEl=document.getElementById('sumLeft');
+    var ll=(lw||0)-settings.goal;// >0 还差，<=0 已达成
+    leftEl.textContent=lw?(ll<=0?'✓':ll.toFixed(1)):'--';
+    leftEl.style.color=lw?(ll<=0?'#7ae582':'#ffd166'):'inherit';
+
+    var html='';
+    if(!records.length)html='<div class="empty">还没有记录<div class="empty-btn" onclick="goAdd()">＋ 记第一笔</div></div>';
+    else{
+      var groups=[];
+      for(var i=records.length-1;i>=0;i--){
+        var r=records[i],g=groups[groups.length-1];
+        if(!g||g.key!==r.date)groups.push({key:r.date,items:[]});
+        groups[groups.length-1].items.push(r);
+      }
+      groups.forEach(function(g){
+        html+='<div class="date-hd">'+g.key+(g.key===tdy()?' · 今天':'')+'</div>';
+        g.items.forEach(function(r){
+          var idx=records.indexOf(r),diff=idx>0?(records[idx-1].weight-r.weight):null,cls='same',sign='—';
+          if(diff!==null){cls=diff>0?'down':(diff<0?'up':'same');sign=diff>0?'↓':(diff<0?'↑':'—');}
+          var dimsTxt=[];
+          for(var d=0;d<DIMS.length;d++)if(r[DIMS[d]])dimsTxt.push(DN[DIMS[d]]+' '+r[DIMS[d]]);
+          var bmiTxt=(r.weight/((settings.height/100)*(settings.height/100))).toFixed(1);
+          html+='<div class="item" data-date="'+r.date+'">'+
+            '<div class="icon">⚖️</div>'+
+            '<div class="mid"><div class="cat">'+r.weight.toFixed(2)+'<span class="kg">kg · BMI '+bmiTxt+'</span></div>'+
+            (dimsTxt.length?'<div class="note">'+dimsTxt.join(' · ')+'</div>':'')+'</div>'+
+            '<div class="chg" data-date="'+r.date+'" title="点击对比"><div class="diff '+cls+'">'+sign+' '+(diff!==null?Math.abs(diff).toFixed(2):'')+'</div><div class="vs">vs 上次</div></div>'+
+            '<button class="del-btn" data-date="'+r.date+'">✕</button></div>';
+        });
+      });
+    }
+    document.getElementById('list').innerHTML=html;
+    markCmp();
+    drawChart();
+  }
+  function markCmp(){// 面板开着时，高亮列表里正在对比的那条
+    var items=document.querySelectorAll('#list .item');
+    for(var i=0;i<items.length;i++){
+      items[i].classList.toggle('cmp-on',cmpTarget&&items[i].dataset.date===cmpTarget.date&&!document.getElementById('cmpPanel').classList.contains('hidden'));
+    }
+  }
+  function editRecord(date){
+    var r=null;for(var i=0;i<records.length;i++)if(records[i].date===date){r=records[i];break}
+    if(!r)return;
+    editingDate=date;
+    document.getElementById('dateIn').value=r.date;
+    document.getElementById('wtIn').value=r.weight;
+    for(var d=0;d<DIMS.length;d++)document.getElementById(DIMS[d]+'In').value=r[DIMS[d]]||'';
+    document.getElementById('dimBody').classList.add('show');
+    document.getElementById('dimArrow').classList.add('open');
+    goAdd();
+  }
+  var lastDel=null,lastDelTimer=null;
+  function deleteRecord(date){
+    var ix=-1,r=null;
+    for(var i=0;i<records.length;i++)if(records[i].date===date){ix=i;r=records[i];break}
+    if(!r)return;
+    records.splice(ix,1);
+    if(cmpTarget&&cmpTarget.date===date)closeCmpPanel();// 删的正是对比中的那条，关面板
+    save();renderList();renderHero();renderAnalysis();
+    lastDel={r:r,ix:ix};
+    var t=document.getElementById('toast');
+    t.innerHTML='已删除<a id="undoLink">撤销</a>';
+    t.classList.add('show');
+    clearTimeout(lastDelTimer);
+    lastDelTimer=setTimeout(function(){t.classList.remove('show');lastDel=null},5000);
+    document.getElementById('undoLink').onclick=function(){
+      if(!lastDel)return;
+      records.splice(lastDel.ix,0,lastDel.r);
+      lastDel=null;
+      clearTimeout(lastDelTimer);
+      t.classList.remove('show');
+      save();renderList();renderHero();renderAnalysis();
+      toast('已恢复');
+    };
+  }
+
+  // ── 图表 ──
+  var chartRange='all',chartFrom='',chartTo='';
+  function chartList(){
+    var now=Date.now(),from='';
+    if(chartRange==='7')from=dStr(new Date(now-6*86400000));
+    else if(chartRange==='30')from=dStr(new Date(now-29*86400000));
+    else if(chartRange==='90')from=dStr(new Date(now-89*86400000));
+    else if(chartRange==='custom'){from=chartFrom;if(!from)from=''}
+    return records.filter(function(r){
+      if(from&&r.date<from)return false;
+      if(chartRange==='custom'&&chartTo&&r.date>chartTo)return false;
+      return true;
+    });
+  }
+  function setChartRange(r){
+    chartRange=r;
+    if(r==='custom'&&!chartFrom){
+      chartTo=tdy();
+      chartFrom=dStr(new Date(Date.now()-29*86400000));
+      document.getElementById('chartFrom').value=chartFrom;
+      document.getElementById('chartTo').value=chartTo;
+    }
+    renderChartRange();
+    drawChart();
+  }
+  function renderChartRange(){
+    var rh='';[['all','全部'],['7','近7天'],['30','近30天'],['90','近90天'],['custom','自定义']].forEach(function(t){
+      rh+='<button class="rg-chip'+(chartRange===t[0]?' on':'')+'" onclick="setChartRange(\''+t[0]+'\')">'+t[1]+'</button>';
+    });
+    document.getElementById('chartRangeRow').innerHTML=rh;
+    document.getElementById('chartCustomRow').classList.toggle('hidden',chartRange!=='custom');
+  }
+  function drawChart(){
+    if(!window.Chart)return;
+    var cv=document.getElementById('chart');
+    if(!cv)return;
+    var dark=document.documentElement.getAttribute('data-theme')==='dark';
+    var tickC=dark?'#7d8599':'#8b91a0';
+    var gridC=dark?'#2a2e3d':'#eef0f4';
+    var cs=getComputedStyle(document.documentElement);
+    var pc=cs.getPropertyValue('--primary').trim()||'#5B6CFF';
+    var ctx=cv.getContext('2d');
+    if(window._c)window._c.destroy();
+    var list=chartList();
+    var lbs=[],vals=[];
+    var h2=(settings.height/100)*(settings.height/100);
+    for(var i=0;i<list.length;i++){
+      lbs.push(fmt(list[i].date));
+      if(curTab==='bmi')vals.push(list[i].weight?+(list[i].weight/h2).toFixed(1):null);
+      else vals.push(list[i][curTab]||null);
+    }
+    if(curTab==='weight'){
+      var gl=[];for(var i=0;i<list.length;i++)gl.push(settings.goal);
+      window._c=new Chart(ctx,{type:'line',data:{labels:lbs,datasets:[
+        {label:'体重',data:vals,borderColor:pc,backgroundColor:pc+'26',fill:true,tension:.3,pointRadius:3,pointBackgroundColor:pc,borderWidth:2.5},
+        {label:'目标 '+settings.goal+'kg',data:gl,borderColor:'#18a058',borderDash:[5,5],borderWidth:1.5,pointRadius:0,fill:false}
+      ]},options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom',labels:{boxWidth:8,font:{size:11},color:tickC}}},
+        scales:{y:{ticks:{font:{size:11},color:tickC},grid:{color:gridC}},x:{ticks:{font:{size:9},maxRotation:45,color:tickC},grid:{display:false}}}}});
+    }else if(curTab==='bmi'){
+      window._c=new Chart(ctx,{type:'line',data:{labels:lbs,datasets:[
+        {label:'BMI',data:vals,spanGaps:true,borderColor:'#f59e0b',backgroundColor:'#f59e0b20',tension:.3,pointRadius:3,pointBackgroundColor:'#f59e0b',borderWidth:2.5}
+      ]},options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom',labels:{boxWidth:8,font:{size:11},color:tickC}}},
+        scales:{y:{ticks:{font:{size:11},color:tickC},grid:{color:gridC}},x:{ticks:{font:{size:9},maxRotation:45,color:tickC},grid:{display:false}}}}});
+    }else{
+      window._c=new Chart(ctx,{type:'line',data:{labels:lbs,datasets:[
+        {label:DN[curTab],data:vals,spanGaps:true,borderColor:DC[curTab],backgroundColor:DC[curTab]+'20',tension:.3,pointRadius:3,pointBackgroundColor:DC[curTab],borderWidth:2.5}
+      ]},options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'bottom',labels:{boxWidth:8,font:{size:11},color:tickC}}},
+        scales:{y:{ticks:{font:{size:11},color:tickC,callback:function(v){return v+'cm'}},grid:{color:gridC}},x:{ticks:{font:{size:9},maxRotation:45,color:tickC},grid:{display:false}}}}});
+    }
+  }
+
+  // ── 分析页 ──
+  function bmiTag(b){return b<18.5?'偏瘦':(b<24?'正常':(b<28?'超重':'肥胖'))}
+  function streak(){// 连续下降/上升天数
+    if(records.length<2)return null;
+    var dir=0,n=0;
+    for(var i=records.length-1;i>0;i--){
+      var d=records[i].weight-records[i-1].weight;
+      var cur=d<0?1:(d>0?-1:0);
+      if(cur===0)break;
+      if(dir===0)dir=cur;
+      if(cur!==dir)break;
+      n++;
+    }
+    return n>0?{n:n,dir:dir}:null;
+  }
+  function recentChange(days){
+    var now=tdy(),cutoff=dStr(new Date(Date.now()-days*86400000));
+    var first=null,last=null;
+    records.forEach(function(r){
+      if(r.date>=cutoff&&r.date<=now){if(!first)first=r;last=r}
+    });
+    if(!first||!last||first===last)return null;
+    return last.weight-first.weight;
+  }
+  function milestones(){
+    var seen={},out=[];
+    for(var i=1;i<records.length;i++){
+      var w=records[i].weight,lw=records[i-1].weight;
+      if(w<lw){
+        for(var k=Math.ceil(w);k<=Math.floor(lw);k++){
+          if(!seen[k]){seen[k]=true;out.push({kg:k,date:records[i].date})}
+        }
+      }
+    }
+    return out.sort(function(a,b){return b.kg-a.kg});
+  }
+  function predict(){
+    if(records.length<2)return null;
+    var first=records[0],last=records[records.length-1];
+    var days=Math.max(1,Math.round((new Date(last.date)-new Date(first.date))/86400000));
+    var rate=(last.weight-first.weight)/days;
+    var remain=settings.goal-last.weight;
+    if(rate>=0||remain>=0)return null;
+    var d=new Date(last.date+'T00:00:00');
+    d.setDate(d.getDate()+Math.round(remain/rate));
+    return dStr(d);
+  }
+  function renderAnalysis(){
+    sortR();
+    var lw=records.length?records[records.length-1].weight:null;
+    var fw=records.length?records[0].weight:null;
+    var sub=document.getElementById('anSub');
+    sub.innerHTML='<span>共 '+records.length+' 条记录</span>'+(lw?'<span>当前 <b>'+lw.toFixed(1)+' kg</b></span>':'');
+    // 目标进度
+    document.getElementById('gStart').textContent=fw?fw.toFixed(1):'--';
+    document.getElementById('gCur').textContent=lw?lw.toFixed(1):'--';
+    document.getElementById('gGoal').textContent=settings.goal.toFixed(1);
+    var pct=null;
+    if(fw&&lw&&fw>settings.goal){
+      pct=Math.max(0,Math.min(100,Math.round((fw-lw)/(fw-settings.goal)*100)));
+      document.getElementById('gPct').textContent=pct+'%';
+      var remainKg=lw-settings.goal;
+      document.getElementById('gPctTxt').textContent=remainKg>0
+        ?('已减 '+(fw-lw).toFixed(1)+' kg，还差 '+remainKg.toFixed(1)+' kg')
+        :('已减 '+(fw-lw).toFixed(1)+' kg，🎉 达成目标，超目标 '+(Math.abs(remainKg)).toFixed(1)+' kg');
+      document.getElementById('gFill').style.width=pct+'%';
+    }else{
+      document.getElementById('gPct').textContent='--';
+      document.getElementById('gPctTxt').textContent='记录两次体重后显示进度';
+      document.getElementById('gFill').style.width='0%';
+    }
+    // 身体状态
+    var bmi=lw?(lw/((settings.height/100)*(settings.height/100))):null;
+    document.getElementById('bBmi').textContent=bmi?bmi.toFixed(1):'--';
+    var bt=document.getElementById('bTag');
+    bt.textContent=bmi?bmiTag(bmi):'--';
+    bt.style.color=bmi?['var(--primary)','var(--income)','#f59e0b','var(--expense)'][bmi<18.5?0:(bmi<24?1:(bmi<28?2:3))]:'';
+    var c7=recentChange(7),c30=recentChange(30);
+    var e7=document.getElementById('b7d'),e30=document.getElementById('b30d');
+    e7.textContent=c7===null?'--':(c7<=0?'↓':'↑')+Math.abs(c7).toFixed(2)+'kg';
+    e7.style.color=c7===null?'':(c7<=0?'var(--income)':'var(--expense)');
+    e30.textContent=c30===null?'--':(c30<=0?'↓':'↑')+Math.abs(c30).toFixed(2)+'kg';
+    e30.style.color=c30===null?'':(c30<=0?'var(--income)':'var(--expense)');
+    document.getElementById('bPred').textContent=predict()||'暂无法预测（体重未下降或已达标）';
+    var st=streak();
+    var stEl=document.getElementById('streak');
+    if(st){stEl.textContent='连续 '+st.n+' 天'+(st.dir===1?'下降 ↓':'上升 ↑');stEl.style.color=st.dir===1?'var(--income)':'var(--expense)'}
+    else{stEl.textContent='无连续变化';stEl.style.color=''}
+    // 里程碑
+    var ms=milestones(),mh='';
+    if(!ms.length)mh='<div class="ana-empty">每减 1kg 会在这里记下一个里程碑</div>';
+    else ms.slice(0,15).forEach(function(m){
+      mh+='<div class="ms-row"><span class="kg">🏅 '+m.kg+'.0 kg</span><span class="d">'+m.date+'</span></div>';
+    });
+    document.getElementById('msList').innerHTML=mh;
+    // 维度变化
+    var dh='';
+    if(records.length>=2){
+      var fr=records[0];
+      for(var i=0;i<DIMS.length;i++){
+        var k=DIMS[i];
+        if(fr[k]&&lw&&records[records.length-1][k]){
+          var dv=records[records.length-1][k]-fr[k];
+          if(dv!==0)dh+='<div class="ms-row"><span class="kg">'+DN[k]+'</span><span class="d" style="color:'+(dv<0?'var(--income)':'var(--expense)')+'">'+(dv<0?'-':'+')+Math.abs(dv).toFixed(1)+' cm</span></div>';
+        }
+      }
+    }
+    document.getElementById('dimChanges').innerHTML=dh||'<div class="ana-empty">记录维度后自动对比变化</div>';
+  }
+  function findNear(ds){// 该日期或之前最近的一条记录
+    var best=null;
+    records.forEach(function(r){if(r.date<=ds&&(!best||r.date>best.date))best=r});
+    return best;
+  }
+  var cmpTarget=null,cmpDate=null,cmpCalY,cmpCalM;
+  function cmpHasMap(){
+    var m={};
+    records.forEach(function(r){m[r.date]=true});
+    return m;
+  }
+  function openCmp(date){// 点击列表变化数字 → 弹出对比面板
+    var r=null;for(var i=0;i<records.length;i++)if(records[i].date===date){r=records[i];break}
+    if(!r)return;
+    cmpTarget=r;
+    var idx=records.indexOf(r);
+    var base=idx>0?records[idx-1]:r;
+    cmpDate=base.date;
+    var p=cmpTarget.date.split('-');
+    cmpCalY=parseInt(p[0]);cmpCalM=parseInt(p[1])-1;
+    document.getElementById('cmpPanel').classList.remove('hidden');
+    renderCmpPanel();
+    markCmp();
+  }
+  function renderCmpCal(){
+    document.getElementById('cmpCalTitle').textContent=cmpCalY+'年'+(cmpCalM+1)+'月';
+    var html='';
+    ['日','一','二','三','四','五','六'].forEach(function(w){html+='<div class="cmp-cal-wd">'+w+'</div>'});
+    var dow=new Date(cmpCalY,cmpCalM,1).getDay();
+    var dim=new Date(cmpCalY,cmpCalM+1,0).getDate();
+    for(var i=0;i<dow;i++)html+='<div></div>';
+    var has=cmpHasMap();
+    for(var d=1;d<=dim;d++){
+      var ds=cmpCalY+'-'+p2(cmpCalM+1)+'-'+p2(d);
+      var cls='cmp-cal-d';
+      if(cmpTarget&&ds>cmpTarget.date){cls+=' off';}// 本条之后的日期不可选
+      else{
+        if(has[ds])cls+=' has';
+        if(ds===cmpDate)cls+=' sel';
+        if(ds===cmpTarget.date)cls+=' cur';
+        if(ds===tdy())cls+=' today';
+      }
+      html+='<div class="'+cls+'" data-d="'+ds+'">'+d+'</div>';
+    }
+    document.getElementById('cmpCalGrid').innerHTML=html;
+  }
+  function cmpCalNav(d){
+    cmpCalM+=d;
+    if(cmpCalM<0){cmpCalM=11;cmpCalY--}
+    if(cmpCalM>11){cmpCalM=0;cmpCalY++}
+    renderCmpCal();
+  }
+  document.getElementById('cmpCalGrid').onclick=function(e){
+    var el=e.target.closest('.cmp-cal-d');if(!el)return;
+    e.stopPropagation();// 日历重建后 e.target 会失效，阻止冒泡防止误判"点外部关闭"
+    cmpDate=el.dataset.d;
+    renderCmpPanel();
+  };
+  function renderCmpPanel(){
+    if(!cmpTarget)return;
+    document.getElementById('cmpCur').innerHTML='<div class="cmp-cur-tag">正在对比这条</div>'+cmpTarget.weight.toFixed(2)+' kg<span>'+fmt(cmpTarget.date)+'</span>';
+    renderCmpCal();
+    var has=cmpHasMap();
+    var base=findNear(cmpDate);
+    var el=document.getElementById('cmpSum');
+    if(!base){el.innerHTML='<div class="ana-empty">所选日期之前没有记录</div>';return}
+    var note=has[cmpDate]?'':'（'+fmt(cmpDate)+' 无记录，采用 '+fmt(base.date)+' 的体重）';
+    document.getElementById('cmpBase').innerHTML=base.weight.toFixed(2)+' kg<span>'+fmt(base.date)+' · 基准</span><div class="cmp-base-note">'+note+'</div>';
+    if(base.date===cmpTarget.date){
+      if(cmpDate>cmpTarget.date)el.innerHTML='<div class="ana-empty">'+fmt(cmpDate)+' 在本条之后，没有更新的数据可比<br>请选更早的日期</div>';
+      else el.innerHTML='<div class="ana-empty">与自身对比没有意义，选其他日期</div>';
+      return;
+    }
+    var diff=cmpTarget.weight-base.weight;
+    var days=Math.round((new Date(cmpTarget.date+'T00:00:00')-new Date(base.date+'T00:00:00'))/86400000);
+    var perDay=Math.round(diff/days*1000);
+    var col=diff<0?'var(--income)':(diff>0?'var(--expense)':'var(--sub)');
+    el.innerHTML='<div style="color:'+col+';font-size:1.5rem;font-weight:800">'+(diff<0?'↓ ':diff>0?'↑ ':'± ')+Math.abs(diff).toFixed(2)+' kg</div><div class="cmp-sub2">'+fmt(base.date)+' → '+fmt(cmpTarget.date)+' · 间隔 '+days+' 天 · 日均 '+(perDay<=0?'-':'+')+Math.abs(perDay)+' g</div>';
+  }
+  function closeCmpPanel(){
+    document.getElementById('cmpPanel').classList.add('hidden');
+    markCmp();// 清除列表高亮
+  }
+  function cmpPickRecent(){
+    if(!cmpTarget)return;
+    var idx=records.indexOf(cmpTarget);
+    var base=idx>0?records[idx-1]:cmpTarget;
+    cmpDate=base.date;
+    var p=cmpDate.split('-');
+    cmpCalY=parseInt(p[0]);cmpCalM=parseInt(p[1])-1;
+    renderCmpPanel();
+  }
+  function cmpPickFirst(){
+    if(!cmpTarget||!records.length)return;
+    cmpDate=records[0].date;
+    var p=cmpDate.split('-');
+    cmpCalY=parseInt(p[0]);cmpCalM=parseInt(p[1])-1;
+    renderCmpPanel();
+  }
+  function saveSettings(){
+    var g=parseFloat(document.getElementById('setGoal').value);
+    var h=parseFloat(document.getElementById('setHeight').value);
+    if(!isNaN(g)&&g>0&&g<300)settings.goal=g;
+    if(!isNaN(h)&&h>100&&h<250)settings.height=h;
+    save();renderHero();renderList();renderAnalysis();
+    toast('已保存：目标 '+settings.goal+'kg，身高 '+settings.height+'cm');
+  }
+
+  // ── 导出 ──
+  function download(content,name,type){
+    var blob=new Blob([content],{type:type});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');
+    a.href=url;a.download=name;document.body.appendChild(a);a.click();
+    setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url)},100);
+  }
+  var expRange='all';
+  function closeExportPanel(){
+    document.getElementById('exportPanel').classList.add('hidden');
+    document.getElementById('exportMask').classList.add('hidden');
+  }
+  function toggleExportPanel(){
+    var p=document.getElementById('exportPanel'),m=document.getElementById('exportMask');
+    if(p.classList.contains('hidden')){renderExpUI();p.classList.remove('hidden');m.classList.remove('hidden')}
+    else{p.classList.add('hidden');m.classList.add('hidden')}
+  }
+  function renderExpUI(){
+    var rh='';[['all','全部'],['month','本月'],['lastmonth','上月'],['custom','自定义']].forEach(function(t){
+      rh+='<button class="f-chip'+(expRange===t[0]?' on':'')+'" onclick="setExpRange(\''+t[0]+'\')">'+t[1]+'</button>';
+    });
+    document.getElementById('expRangeRow').innerHTML=rh;
+    document.getElementById('expCustomRow').classList.toggle('hidden',expRange!=='custom');
+  }
+  function setExpRange(r){
+    expRange=r;
+    if(r==='custom'&&!document.getElementById('expFrom').value){
+      document.getElementById('expFrom').value=ymStr(new Date())+'-01';
+      document.getElementById('expTo').value=tdy();
+    }
+    renderExpUI();
+  }
+  function expFiltered(){
+    var now=new Date(),from='',to='';
+    if(expRange==='month'){from=ymStr(now)+'-01';to=tdy()}
+    else if(expRange==='lastmonth'){
+      var lm=new Date(now.getFullYear(),now.getMonth()-1,1);
+      from=ymStr(lm)+'-01';
+      to=ymStr(lm)+'-'+p2(new Date(now.getFullYear(),now.getMonth(),0).getDate());
+    }else if(expRange==='custom'){
+      from=document.getElementById('expFrom').value;
+      to=document.getElementById('expTo').value;
+    }
+    return records.slice().sort(function(a,b){return a.date<b.date?-1:1}).filter(function(r){
+      var d=r.date;
+      if(from&&d<from)return false;
+      if(to&&d>to)return false;
+      return true;
+    });
+  }
+  function expRangeName(){
+    if(expRange==='month')return '本月';
+    if(expRange==='lastmonth')return '上月';
+    if(expRange==='custom'){
+      var f=document.getElementById('expFrom').value,t=document.getElementById('expTo').value;
+      return (f||'起')+'_'+(t||'止');
+    }
+    return '全部';
+  }
+  function exportCSV(){
+    var list=expFiltered();
+    if(!list.length){toast('所选范围内没有记录');return}
+    var head='日期,体重kg,较上次变化kg,胸围cm,腰围cm,臀围cm,大腿cm,小腿cm\n';
+    var rows=list.map(function(r,i){
+      var diff=i>0?(r.weight-list[i-1].weight).toFixed(2):'';
+      return [r.date,r.weight||'',diff,r.chest||'',r.waist||'',r.hip||'',r.thigh||'',r.calf||''].join(',');
+    }).join('\n');
+    download('﻿'+head+rows,'体重记录_'+expRangeName()+'.csv','text/csv;charset=utf-8');
+    closeExportPanel();
+    toast('已导出 '+list.length+' 条记录');
+  }
+  function exportJSON(){
+    download(JSON.stringify({records:records,settings:settings},null,2),'体重全量备份_'+tdy()+'.json','application/json');
+    closeExportPanel();
+    toast('已导出全量备份');
+  }
+
+  // ── 事件 ──
+  document.getElementById('tabs').onclick=function(e){
+    if(e.target.classList.contains('tab')){
+      curTab=e.target.dataset.k;
+      var bs=document.querySelectorAll('.tab');
+      for(var i=0;i<bs.length;i++)bs[i].classList.toggle('on',bs[i].dataset.k===curTab);
+      drawChart();
+    }
+  };
+  document.getElementById('list').onclick=function(e){
+    var del=e.target.closest('.del-btn');
+    if(del){deleteRecord(del.dataset.date);return;}
+    var chg=e.target.closest('.chg');
+    if(chg){openCmp(chg.dataset.date);return;}
+    var item=e.target.closest('.item');
+    if(item){editRecord(item.dataset.date);}
+  };
+  document.getElementById('chartFrom').onchange=function(){chartFrom=this.value;drawChart()};
+  document.getElementById('chartTo').onchange=function(){chartTo=this.value;drawChart()};
+  document.addEventListener('click',function(e){// 点变化数字=切换对比；点其他面板外区域=关闭
+    var panel=document.getElementById('cmpPanel');
+    if(panel.classList.contains('hidden'))return;
+    if(e.target.closest&&e.target.closest('.chg'))return;
+    if(panel.contains(e.target))return;
+    closeCmpPanel();
+  });
+  function refreshAll(){renderHero();renderList();renderAnalysis()}
+
+  // ── 暴露 & 启动 ──
+  window.goAdd=goAdd;window.goList=goList;window.goAna=goAna;
+  window.toggleDim=toggleDim;window.saveRecord=saveRecord;window.fillLast=fillLast;
+  window.editRecord=editRecord;window.deleteRecord=deleteRecord;
+  window.saveSettings=saveSettings;
+  window.toggleStylePanel=toggleStylePanel;window.selectStyle=selectStyle;window.toggleTheme=toggleTheme;
+  window.toggleExportPanel=toggleExportPanel;window.setExpRange=setExpRange;
+  window.exportCSV=exportCSV;window.exportJSON=exportJSON;
+  window.setChartRange=setChartRange;
+  window.closeCmpPanel=closeCmpPanel;window.cmpPickRecent=cmpPickRecent;window.cmpPickFirst=cmpPickFirst;
+  window.cmpCalNav=cmpCalNav;
+
+  applyStyle();
+  renderChartRange();
+  load();
+  document.getElementById('dateIn').value=tdy();
+})();
+</script>
+</body>
+</html>
